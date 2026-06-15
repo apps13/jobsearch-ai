@@ -76,9 +76,9 @@ function App() {
 
       {!user && <LoginPage />}
 
-      {user && user.status !== 'approved' && <PendingApproval status={user.status} />}
+      {user && user.status !== 'approved' && !user.is_admin && <PendingApproval status={user.status} />}
 
-      {user && user.status === 'approved' && (
+      {user && (user.status === 'approved' || user.is_admin) && (
         <>
           <nav className="tabs">
             {tabs.map((t) => (
