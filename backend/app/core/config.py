@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # CORS — origins allowed to call the API.
     cors_origins: list[str] = [
         "http://localhost:5173",            # Vite dev server
-        "https://jobsearch-ai.netlify.app", # production frontend — update to real domain
+        "https://jobsearch-ai.netlify.app", # production frontend
     ]
 
 

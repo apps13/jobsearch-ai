@@ -101,7 +101,7 @@ Defined in [backend/app/core/config.py](backend/app/core/config.py) (`Settings`)
 
 [backend/.env.example](backend/.env.example) provides sensible non-secret defaults for `OPENAI_MODEL` and `DATABASE_URL`, with `OPENAI_API_KEY` left as a placeholder — keep it this way; only the API key needs to stay redacted.
 
-CORS origins (`Settings.cors_origins`) are currently hardcoded in `config.py` rather than environment-driven (`http://localhost:5173` for Vite dev, plus a placeholder Netlify production URL that needs updating to the real domain).
+CORS origins (`Settings.cors_origins`) are currently hardcoded in `config.py` rather than environment-driven (`http://localhost:5173` for Vite dev, plus the production Netlify URL — see Deployment below).
 
 ## Local development
 
@@ -125,6 +125,13 @@ npm run dev
 ```
 
 Runs at `http://localhost:5173` (already allowed by `Settings.cors_origins`). Requires the backend running per above. See [frontend/README.md](frontend/README.md) for the stack summary and security notes.
+
+## Deployment
+
+- **Frontend**: Netlify — https://jobsearch-ai.netlify.app (deploys from `main`, base directory `frontend`, build command `npm run build`, publish directory `dist`, env var `VITE_API_URL` set to the Railway backend URL)
+- **Backend**: Railway — https://jobsearch-ai-production.up.railway.app (root directory `backend`, env vars `OPENAI_API_KEY`, `OPENAI_MODEL`, `DATABASE_URL`; `DATABASE_URL` is a reference to the linked Railway Postgres service)
+- **Database**: Railway Postgres (production — separate from the local docker-compose Postgres used in development)
+- **Migrations**: after schema changes, run `alembic upgrade head` against production via the Railway service's Console tab (this does not happen automatically)
 
 ## What not to do
 
