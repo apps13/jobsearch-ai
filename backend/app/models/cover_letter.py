@@ -17,6 +17,7 @@ class CoverLetter(Base):
     __tablename__ = "cover_letters"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     # Nullable: a generation may use pasted resume text rather than a saved resume.
     resume_id: Mapped[int | None] = mapped_column(ForeignKey("resumes.id"), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))

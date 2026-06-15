@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import { getCurrentUser, logout } from './api/auth'
 import { getResumes } from './api/resumes'
+import AdminPanel from './components/AdminPanel'
 import GenerateForm from './components/GenerateForm'
-import ResultView from './components/ResultView'
 import HistoryList from './components/HistoryList'
+import LoginPage from './components/LoginPage'
+import PendingApproval from './components/PendingApproval'
 
 const TABS = [
   { id: 'generate', label: 'Generate' },
   { id: 'history', label: 'History' },
 ]
 
+const ADMIN_TAB = { id: 'admin', label: 'Admin' }
+
 function App() {
   const [tab, setTab] = useState('generate')
   const [resumes, setResumes] = useState([])
   const [resumesError, setResumesError] = useState(null)
-  const [lastResult, setLastResult] = useState(null)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  const [user, setUser] = useState(undefined)
 
   const loadResumes = async () => {
     try {
@@ -26,42 +31,81 @@ function App() {
     }
   }
 
+  const loadUser = async () => {
+    try {
+      setUser(await getCurrentUser())
+    } catch {
+      setUser(null)
+    }
+  }
+
   useEffect(() => {
-    loadResumes()
+    loadUser()
   }, [])
+
+  useEffect(() => {
+    if (user?.status === 'approved') loadResumes()
+  }, [user])
+
+  const handleLogout = async () => {
+    await logout()
+    setUser(null)
+  }
+
+  if (user === undefined) {
+    return null
+  }
+
+  const tabs = user?.is_admin ? [...TABS, ADMIN_TAB] : TABS
 
   return (
     <div className="app">
-      <h1>JobSearch AI</h1>
-      <p className="tagline">Tailored cover letters, fast.</p>
+      <header className="app-header">
+        <div className="app-header-row">
+          <div>
+            <h1>JobSearch AI</h1>
+            <p className="tagline">Tailored cover letters, fast.</p>
+          </div>
+          {user && (
+            <button type="button" className="btn-delete" onClick={handleLogout}>
+              Log out
+            </button>
+          )}
+        </div>
+      </header>
 
-      <nav className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            className={tab === t.id ? 'active' : ''}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+      {!user && <LoginPage />}
 
-      {resumesError && <p className="error">Failed to load saved resumes: {resumesError}</p>}
+      {user && user.status !== 'approved' && <PendingApproval status={user.status} />}
 
-      {tab === 'generate' && (
+      {user && user.status === 'approved' && (
         <>
-          <GenerateForm
-            resumes={resumes}
-            onResult={setLastResult}
-            onGenerated={() => setHistoryRefreshKey((k) => k + 1)}
-            onResumeUploaded={loadResumes}
-          />
-          <ResultView result={lastResult} />
+          <nav className="tabs">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                className={tab === t.id ? 'active' : ''}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+
+          {tab === 'generate' && (
+            <GenerateForm
+              resumes={resumes}
+              resumesError={resumesError}
+              onGenerated={() => setHistoryRefreshKey((k) => k + 1)}
+              onResumeUploaded={loadResumes}
+            />
+          )}
+
+          {tab === 'history' && <HistoryList refreshKey={historyRefreshKey} />}
+
+          {tab === 'admin' && user.is_admin && <AdminPanel />}
         </>
       )}
-
-      {tab === 'history' && <HistoryList refreshKey={historyRefreshKey} />}
     </div>
   )
 }

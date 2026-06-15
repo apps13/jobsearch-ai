@@ -14,11 +14,13 @@ class CoverLetterRepository:
         role_id: int,
         cover_letter: dict,
         fit_analysis: dict,
+        user_id: int,
         resume_id: int | None = None,
     ) -> CoverLetter:
         record = CoverLetter(
             role_id=role_id,
             resume_id=resume_id,
+            user_id=user_id,
             cover_letter=cover_letter,
             fit_analysis=fit_analysis,
         )
@@ -27,18 +29,23 @@ class CoverLetterRepository:
         self.db.refresh(record)
         return record
 
-    def list(self) -> list[CoverLetter]:
+    def list(self, user_id: int) -> list[CoverLetter]:
         return (
             self.db.query(CoverLetter)
+            .filter(CoverLetter.user_id == user_id)
             .order_by(CoverLetter.created_at.desc())
             .all()
         )
 
-    def get(self, cover_letter_id: int) -> CoverLetter | None:
-        return self.db.get(CoverLetter, cover_letter_id)
+    def get(self, cover_letter_id: int, user_id: int) -> CoverLetter | None:
+        return (
+            self.db.query(CoverLetter)
+            .filter(CoverLetter.id == cover_letter_id, CoverLetter.user_id == user_id)
+            .first()
+        )
 
-    def delete(self, cover_letter_id: int) -> bool:
-        record = self.db.get(CoverLetter, cover_letter_id)
+    def delete(self, cover_letter_id: int, user_id: int) -> bool:
+        record = self.get(cover_letter_id, user_id)
         if record is None:
             return False
         self.db.delete(record)

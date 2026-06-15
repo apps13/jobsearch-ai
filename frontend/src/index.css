@@ -1,22 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
 
 :root {
-  --color-bg: #e8dfc8;
-  --color-paper: #f6f0e1;
-  --color-text: #3a2e20;
-  --color-border: #cdbb95;
-  --color-border-strong: #b5a179;
-  --color-accent: #a8542e;
-  --color-accent-hover: #8c4525;
-  --color-accent-2: #5f7a4d;
-  --color-accent-3: #c49a3c;
-  --color-error: #9c4a36;
+  --color-bg: #2a2018;
+  --color-paper: #352a20;
+  --color-text: #ecdfc8;
+  --color-border: #4a3c2c;
+  --color-border-strong: #5c4a36;
+  --color-accent: #d97b4f;
+  --color-accent-hover: #e89169;
+  --color-accent-2: #9bb37a;
+  --color-accent-3: #e8b84b;
+  --color-error: #e08e80;
 
   font-family: 'Lora', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   font-weight: 400;
 
-  color-scheme: light;
+  color-scheme: dark;
   color: var(--color-text);
   background-color: var(--color-bg);
 
@@ -24,6 +24,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scrollbar-gutter: stable;
 }
 
 a {
@@ -39,7 +43,11 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--color-bg);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(232, 184, 75, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 100% 20%, rgba(155, 179, 122, 0.06) 0%, transparent 50%),
+    var(--color-bg);
+  background-attachment: fixed;
 }
 
 h1,
@@ -64,12 +72,19 @@ button {
   font-weight: 500;
   font-family: inherit;
   background-color: var(--color-accent);
-  color: var(--color-paper);
+  color: var(--color-bg);
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s, border-color 0.2s, transform 0.15s ease, box-shadow 0.15s ease;
 }
-button:hover {
+button:hover:not(:disabled) {
   background-color: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 button:focus,
 button:focus-visible {
@@ -78,6 +93,8 @@ button:focus-visible {
 }
 button:disabled {
   background-color: var(--color-border-strong);
-  color: var(--color-paper);
+  color: var(--color-text);
+  opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }

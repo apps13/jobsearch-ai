@@ -2,8 +2,16 @@ import { useState } from 'react'
 import { generateCoverLetter } from '../api/coverLetters'
 import { uploadResume } from '../api/resumes'
 import LoadingBar from './LoadingBar'
+import ResultView from './ResultView'
 
-export default function GenerateForm({ resumes, onResult, onGenerated, onResumeUploaded }) {
+const STEPS = [
+  { id: 1, label: 'Resume' },
+  { id: 2, label: 'Job details' },
+  { id: 3, label: 'Result' },
+]
+
+export default function GenerateForm({ resumes, resumesError, onGenerated, onResumeUploaded }) {
+  const [step, setStep] = useState(1)
   const [resumeMode, setResumeMode] = useState('upload')
   const [resumeLabel, setResumeLabel] = useState('')
   const [resumeFile, setResumeFile] = useState(null)
@@ -13,6 +21,7 @@ export default function GenerateForm({ resumes, onResult, onGenerated, onResumeU
   const [loading, setLoading] = useState(false)
   const [justFinished, setJustFinished] = useState(false)
   const [error, setError] = useState(null)
+  const [result, setResult] = useState(null)
 
   const isPdf = (f) =>
     f && (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
@@ -28,11 +37,11 @@ export default function GenerateForm({ resumes, onResult, onGenerated, onResumeU
       ? resumeLabel.trim() && resumeFile && isPdf(resumeFile)
       : Boolean(savedResumeId)
 
-  const canSubmit = resumeReady && roleTitle.trim() && jobDescription.trim() && !loading
+  const detailsReady = Boolean(roleTitle.trim() && jobDescription.trim())
 
-  const handleSubmit = async (e) => {
+  const handleGenerate = async (e) => {
     e.preventDefault()
-    if (!canSubmit) return
+    if (!resumeReady || !detailsReady || loading) return
 
     setLoading(true)
     setError(null)
@@ -44,14 +53,15 @@ export default function GenerateForm({ resumes, onResult, onGenerated, onResumeU
         onResumeUploaded()
       }
 
-      const result = await generateCoverLetter({
+      const generated = await generateCoverLetter({
         resume_id: resumeId,
         role_title: roleTitle.trim(),
         job_description: jobDescription.trim(),
       })
       setJustFinished(true)
       await new Promise((r) => setTimeout(r, 450))
-      onResult(result)
+      setResult(generated)
+      setStep(3)
       onGenerated()
     } catch (err) {
       setError(err.message)
@@ -61,94 +71,149 @@ export default function GenerateForm({ resumes, onResult, onGenerated, onResumeU
     }
   }
 
+  const startOver = () => {
+    setResult(null)
+    setError(null)
+    setStep(1)
+  }
+
+  const goToStep = (s) => {
+    if (s < step && !loading) setStep(s)
+  }
+
   return (
     <div className="panel">
       <h2>Generate Cover Letter</h2>
 
-      <form onSubmit={handleSubmit} className="form">
-        <div className="resume-mode-toggle">
-          <label>
-            <input
-              type="radio"
-              name="resumeMode"
-              value="upload"
-              checked={resumeMode === 'upload'}
-              onChange={() => setResumeMode('upload')}
-            />
-            Upload a new resume
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="resumeMode"
-              value="saved"
-              checked={resumeMode === 'saved'}
-              onChange={() => setResumeMode('saved')}
-              disabled={resumes.length === 0}
-            />
-            Use a saved resume
-          </label>
-        </div>
+      {resumesError && <p className="error">Failed to load saved resumes: {resumesError}</p>}
 
-        {resumeMode === 'upload' ? (
-          <>
+      <ol className="wizard-steps">
+        {STEPS.map((s) => (
+          <li
+            key={s.id}
+            className={s.id === step ? 'active' : s.id < step ? 'done' : ''}
+            onClick={() => goToStep(s.id)}
+          >
+            <span className="wizard-step-circle">{s.id}</span>
+            <span className="wizard-step-label">{s.label}</span>
+          </li>
+        ))}
+      </ol>
+
+      {step === 1 && (
+        <div className="form wizard-step-content">
+          <div className="resume-mode-toggle">
             <label>
-              Resume label
               <input
-                type="text"
-                value={resumeLabel}
-                onChange={(e) => setResumeLabel(e.target.value)}
-                placeholder="e.g. Software Engineer Resume"
+                type="radio"
+                name="resumeMode"
+                value="upload"
+                checked={resumeMode === 'upload'}
+                onChange={() => setResumeMode('upload')}
               />
+              Upload a new resume
             </label>
-
             <label>
-              Resume PDF
-              <input type="file" accept=".pdf,application/pdf" onChange={handleFileChange} />
+              <input
+                type="radio"
+                name="resumeMode"
+                value="saved"
+                checked={resumeMode === 'saved'}
+                onChange={() => setResumeMode('saved')}
+                disabled={resumes.length === 0}
+              />
+              Use a saved resume
             </label>
-          </>
-        ) : (
+          </div>
+
+          {resumeMode === 'upload' ? (
+            <>
+              <label>
+                Resume label
+                <input
+                  type="text"
+                  value={resumeLabel}
+                  onChange={(e) => setResumeLabel(e.target.value)}
+                  placeholder="e.g. Software Engineer Resume"
+                />
+              </label>
+
+              <label>
+                Resume PDF
+                <input type="file" accept=".pdf,application/pdf" onChange={handleFileChange} />
+              </label>
+            </>
+          ) : (
+            <label>
+              Saved resume
+              <select value={savedResumeId} onChange={(e) => setSavedResumeId(e.target.value)}>
+                <option value="">Select a saved resume...</option>
+                {resumes.map((resume) => (
+                  <option key={resume.id} value={resume.id}>
+                    {resume.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {error && <p className="error">{error}</p>}
+
+          <div className="wizard-actions">
+            <button type="button" onClick={() => setStep(2)} disabled={!resumeReady}>
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 2 && (
+        <form onSubmit={handleGenerate} className="form wizard-step-content">
           <label>
-            Saved resume
-            <select value={savedResumeId} onChange={(e) => setSavedResumeId(e.target.value)}>
-              <option value="">Select a saved resume...</option>
-              {resumes.map((resume) => (
-                <option key={resume.id} value={resume.id}>
-                  {resume.label}
-                </option>
-              ))}
-            </select>
+            Role Title
+            <input
+              type="text"
+              value={roleTitle}
+              onChange={(e) => setRoleTitle(e.target.value)}
+              placeholder="e.g. Senior Backend Engineer"
+            />
           </label>
-        )}
 
-        <label>
-          Role Title
-          <input
-            type="text"
-            value={roleTitle}
-            onChange={(e) => setRoleTitle(e.target.value)}
-            placeholder="e.g. Senior Backend Engineer"
-          />
-        </label>
+          <label>
+            Job Description
+            <textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              rows={8}
+              placeholder="Paste the job description here..."
+            />
+          </label>
 
-        <label>
-          Job Description
-          <textarea
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            rows={8}
-            placeholder="Paste the job description here..."
-          />
-        </label>
+          {error && <p className="error">{error}</p>}
 
-        {error && <p className="error">{error}</p>}
+          <div className="wizard-actions wizard-actions-between">
+            <button type="button" onClick={() => setStep(1)} disabled={loading}>
+              Back
+            </button>
+            <button type="submit" disabled={!detailsReady || loading}>
+              {loading ? 'Generating...' : 'Generate'}
+            </button>
+          </div>
 
-        <button type="submit" disabled={!canSubmit}>
-          {loading ? 'Generating...' : 'Generate'}
-        </button>
+          {loading && <LoadingBar complete={justFinished} />}
+        </form>
+      )}
 
-        {loading && <LoadingBar complete={justFinished} />}
-      </form>
+      {step === 3 && (
+        <div className="wizard-step-content">
+          <ResultView result={result} />
+          <div className="wizard-actions">
+            <button type="button" onClick={startOver}>
+              Start over
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

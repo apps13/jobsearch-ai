@@ -9,8 +9,8 @@ class RoleRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self, title: str, job_description: str) -> Role:
-        role = Role(title=title, job_description=job_description)
+    def create(self, title: str, job_description: str, user_id: int) -> Role:
+        role = Role(title=title, job_description=job_description, user_id=user_id)
         self.db.add(role)
         self.db.commit()
         self.db.refresh(role)

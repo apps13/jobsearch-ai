@@ -91,33 +91,36 @@ class CoverLetterService:
         self.roles = RoleRepository(db)
         self.cover_letters = CoverLetterRepository(db)
 
-    def generate(self, req: GenerateCoverLetterRequest):
-        resume_text = self._resolve_resume_text(req)
-        role = self.roles.create(title=req.role_title, job_description=req.job_description)
+    def generate(self, req: GenerateCoverLetterRequest, user_id: int):
+        resume_text = self._resolve_resume_text(req, user_id)
+        role = self.roles.create(
+            title=req.role_title, job_description=req.job_description, user_id=user_id
+        )
         result = generate_cover_letter(resume_text, req.job_description)
         return self.cover_letters.create(
             role_id=role.id,
             resume_id=req.resume_id,
+            user_id=user_id,
             cover_letter=result["cover_letter"],
             fit_analysis=result["fit_analysis"],
         )
 
-    def history(self):
-        return self.cover_letters.list()
+    def history(self, user_id: int):
+        return self.cover_letters.list(user_id)
 
-    def delete_history_entry(self, cover_letter_id: int) -> bool:
-        record = self.cover_letters.get(cover_letter_id)
+    def delete_history_entry(self, cover_letter_id: int, user_id: int) -> bool:
+        record = self.cover_letters.get(cover_letter_id, user_id)
         if record is None:
             return False
         role_id = record.role_id
-        self.cover_letters.delete(cover_letter_id)
+        self.cover_letters.delete(cover_letter_id, user_id)
         self.roles.delete(role_id)
         return True
 
-    def _resolve_resume_text(self, req: GenerateCoverLetterRequest) -> str:
+    def _resolve_resume_text(self, req: GenerateCoverLetterRequest, user_id: int) -> str:
         """Use a saved resume if an id is given, otherwise the pasted text."""
         if req.resume_id is not None:
-            resume = self.resumes.get(req.resume_id)
+            resume = self.resumes.get(req.resume_id, user_id)
             if resume is None:
                 raise ValueError(f"Resume {req.resume_id} not found")
             return resume.content

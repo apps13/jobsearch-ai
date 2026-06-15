@@ -12,8 +12,9 @@ Run locally:  uvicorn app.main:app --reload
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.routes import cover_letter, health, resume
+from app.api.routes import admin, auth, cover_letter, health, resume
 from app.core.config import settings
 
 
@@ -27,11 +28,15 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(SessionMiddleware, secret_key=settings.oauth_session_secret)
 
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(admin.router)
     app.include_router(resume.router)
     app.include_router(cover_letter.router)
 

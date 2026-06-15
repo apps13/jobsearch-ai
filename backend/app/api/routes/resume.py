@@ -4,20 +4,26 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_approved_user
 from app.db.session import get_db
+from app.models.user import User
 from app.repositories.resume_repo import ResumeRepository
 from app.schemas.resume import ResumeCreate, ResumeRead
 from app.services.resume_parser import extract_resume_text
 
-router = APIRouter(prefix="/api/resumes", tags=["resumes"])
+router = APIRouter(
+    prefix="/api/resumes", tags=["resumes"], dependencies=[Depends(require_approved_user)]
+)
 
 
 @router.post("", response_model=ResumeRead, status_code=201)
-def create_resume(data: ResumeCreate, db: Session = Depends(get_db)):
+def create_resume(
+    data: ResumeCreate, db: Session = Depends(get_db), user: User = Depends(require_approved_user)
+):
     repo = ResumeRepository(db)
-    if repo.get_by_label(data.label) is not None:
+    if repo.get_by_label(data.label, user.id) is not None:
         raise HTTPException(status_code=400, detail="A resume already exists with this name.")
-    return repo.create(label=data.label, content=data.content)
+    return repo.create(label=data.label, content=data.content, user_id=user.id)
 
 
 @router.post("/upload", response_model=ResumeRead, status_code=201)
@@ -25,35 +31,40 @@ def upload_resume(
     label: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    user: User = Depends(require_approved_user),
 ):
     repo = ResumeRepository(db)
-    if repo.get_by_label(label) is not None:
+    if repo.get_by_label(label, user.id) is not None:
         raise HTTPException(status_code=400, detail="A resume already exists with this name.")
     try:
         content = extract_resume_text(file)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return repo.create(label=label, content=content)
+    return repo.create(label=label, content=content, user_id=user.id)
 
 
 @router.get("", response_model=list[ResumeRead])
-def list_resumes(db: Session = Depends(get_db)):
-    return ResumeRepository(db).list()
+def list_resumes(db: Session = Depends(get_db), user: User = Depends(require_approved_user)):
+    return ResumeRepository(db).list(user.id)
 
 
 @router.get("/{resume_id}", response_model=ResumeRead)
-def get_resume(resume_id: int, db: Session = Depends(get_db)):
-    resume = ResumeRepository(db).get(resume_id)
+def get_resume(
+    resume_id: int, db: Session = Depends(get_db), user: User = Depends(require_approved_user)
+):
+    resume = ResumeRepository(db).get(resume_id, user.id)
     if resume is None:
         raise HTTPException(status_code=404, detail="Resume not found")
     return resume
 
 
 @router.delete("/{resume_id}", status_code=204)
-def delete_resume(resume_id: int, db: Session = Depends(get_db)):
+def delete_resume(
+    resume_id: int, db: Session = Depends(get_db), user: User = Depends(require_approved_user)
+):
     repo = ResumeRepository(db)
     try:
-        deleted = repo.delete(resume_id)
+        deleted = repo.delete(resume_id, user.id)
     except IntegrityError:
         db.rollback()
         raise HTTPException(
