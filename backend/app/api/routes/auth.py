@@ -30,7 +30,10 @@ async def login(provider: str, request: Request):
     if provider not in PROVIDERS:
         raise HTTPException(status_code=404, detail="Unknown provider")
     client = oauth.create_client(provider)
-    redirect_uri = f"{request.base_url}api/auth/{provider}/callback"
+    base_url = request.base_url
+    if settings.environment == "production":
+        base_url = base_url.replace(scheme="https")
+    redirect_uri = f"{base_url}api/auth/{provider}/callback"
     return await client.authorize_redirect(request, redirect_uri)
 
 
