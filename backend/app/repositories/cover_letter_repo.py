@@ -1,0 +1,46 @@
+"""Data access for generated cover letters (the user's history)."""
+
+from sqlalchemy.orm import Session
+
+from app.models.cover_letter import CoverLetter
+
+
+class CoverLetterRepository:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def create(
+        self,
+        role_id: int,
+        cover_letter: dict,
+        fit_analysis: dict,
+        resume_id: int | None = None,
+    ) -> CoverLetter:
+        record = CoverLetter(
+            role_id=role_id,
+            resume_id=resume_id,
+            cover_letter=cover_letter,
+            fit_analysis=fit_analysis,
+        )
+        self.db.add(record)
+        self.db.commit()
+        self.db.refresh(record)
+        return record
+
+    def list(self) -> list[CoverLetter]:
+        return (
+            self.db.query(CoverLetter)
+            .order_by(CoverLetter.created_at.desc())
+            .all()
+        )
+
+    def get(self, cover_letter_id: int) -> CoverLetter | None:
+        return self.db.get(CoverLetter, cover_letter_id)
+
+    def delete(self, cover_letter_id: int) -> bool:
+        record = self.db.get(CoverLetter, cover_letter_id)
+        if record is None:
+            return False
+        self.db.delete(record)
+        self.db.commit()
+        return True
