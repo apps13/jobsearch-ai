@@ -51,7 +51,7 @@ const STEPS = [
       Every generation is saved here. Click any entry to expand it and see the
       full cover letter, Why This Company answer, and fit analysis. You can also
       delete entries you no longer need.`,
-    attachTo: { element: '.tabs', on: 'bottom' },
+    attachTo: { element: '.tabs button:nth-child(2)', on: 'bottom' },
   },
   {
     id: 'help-button',
