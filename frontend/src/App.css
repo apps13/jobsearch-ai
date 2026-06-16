@@ -18,6 +18,117 @@
   gap: 1rem;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-help {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border-strong);
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0;
+  opacity: 0.7;
+  box-shadow: none;
+  line-height: 1;
+}
+
+.btn-help:hover:not(:disabled) {
+  opacity: 1;
+  background: var(--color-border);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── Shepherd.js tour theme (Espresso Paper) ─────────────────────────── */
+.shepherd-element {
+  background: var(--color-paper) !important;
+  border: 1px solid var(--color-border-strong) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  max-width: 320px !important;
+}
+
+.shepherd-arrow::before {
+  background: var(--color-paper) !important;
+}
+
+.shepherd-header {
+  background: transparent !important;
+  padding: 1rem 1rem 0 !important;
+}
+
+.shepherd-title {
+  color: var(--color-text) !important;
+  font-family: 'Playfair Display', Georgia, serif !important;
+  font-size: 1rem !important;
+}
+
+.shepherd-text {
+  color: var(--color-text) !important;
+  font-size: 0.92rem !important;
+  line-height: 1.6 !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.shepherd-text strong {
+  color: var(--color-accent-3) !important;
+}
+
+.shepherd-footer {
+  padding: 0 1rem 1rem !important;
+  gap: 0.5rem !important;
+}
+
+.shepherd-btn-next {
+  background: var(--color-accent) !important;
+  color: var(--color-bg) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 0.45em 1.1em !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+}
+
+.shepherd-btn-next:hover {
+  background: var(--color-accent-hover) !important;
+}
+
+.shepherd-btn-back {
+  background: transparent !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border-strong) !important;
+  border-radius: 6px !important;
+  padding: 0.45em 1.1em !important;
+  font-weight: 600 !important;
+  opacity: 0.75 !important;
+  cursor: pointer !important;
+}
+
+.shepherd-btn-back:hover {
+  opacity: 1 !important;
+  background: var(--color-border) !important;
+}
+
+.shepherd-cancel-icon {
+  color: var(--color-text) !important;
+  opacity: 0.5 !important;
+}
+
+.shepherd-cancel-icon:hover {
+  opacity: 1 !important;
+}
+
+.shepherd-modal-overlay-container {
+  fill: rgba(0, 0, 0, 0.55) !important;
+}
+
 .app-header h1 {
   margin: 0;
 }

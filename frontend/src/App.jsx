@@ -7,6 +7,7 @@ import GenerateForm from './components/GenerateForm'
 import HistoryList from './components/HistoryList'
 import LoginPage from './components/LoginPage'
 import PendingApproval from './components/PendingApproval'
+import { useTour } from './hooks/useTour'
 
 const TABS = [
   { id: 'generate', label: 'Generate' },
@@ -57,6 +58,7 @@ function App() {
   }
 
   const tabs = user?.is_admin ? [...TABS, ADMIN_TAB] : TABS
+  const { startTour } = useTour(user?.is_admin)
 
   return (
     <div className="app">
@@ -66,7 +68,17 @@ function App() {
             <h1>JobSearch AI</h1>
             <p className="tagline">Tailored cover letters, fast.</p>
           </div>
-          {user && (
+          {user && (user.status === 'approved' || user.is_admin) && (
+            <div className="header-actions">
+              <button type="button" className="btn-help" onClick={startTour} title="Take a tour">
+                ?
+              </button>
+              <button type="button" className="btn-delete" onClick={handleLogout}>
+                Log out
+              </button>
+            </div>
+          )}
+          {user && user.status !== 'approved' && !user.is_admin && (
             <button type="button" className="btn-delete" onClick={handleLogout}>
               Log out
             </button>
