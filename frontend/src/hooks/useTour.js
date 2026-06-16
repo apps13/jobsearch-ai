@@ -13,8 +13,7 @@ const STEPS = [
     id: 'tabs',
     text: `<strong>Navigation tabs</strong><br><br>
       <strong>Generate</strong> — create a new cover letter or "Why This Company" answer.<br>
-      <strong>History</strong> — browse and revisit everything you've generated.<br>
-      <strong>Admin</strong> — approve or revoke access for other users (admins only).`,
+      <strong>History</strong> — browse and revisit everything you've generated.`,
     attachTo: { element: '.tabs', on: 'bottom' },
   },
   {
