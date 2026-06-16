@@ -199,10 +199,16 @@
   flex-wrap: wrap;
   align-items: center;
   cursor: default;
+  gap: 0.75rem;
 }
 
 .admin-user-row:hover {
   background: transparent;
+}
+
+.admin-user-row .muted:last-child {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .admin-actions {
