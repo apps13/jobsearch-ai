@@ -97,8 +97,6 @@ export default function ResultView({ result }) {
 
   return (
     <div className="result-view">
-      {result.fit_analysis && <FitAnalysisBlock fitAnalysis={result.fit_analysis} />}
-
       {showTabs && (
         <>
           <div className="result-tabs">
@@ -124,6 +122,8 @@ export default function ResultView({ result }) {
 
       {!showTabs && hasCoverLetter && <CoverLetterText coverLetter={result.cover_letter} />}
       {!showTabs && hasWtc && <WhyThisCompany text={result.why_this_company} />}
+
+      {result.fit_analysis && <FitAnalysisBlock fitAnalysis={result.fit_analysis} />}
     </div>
   )
 }

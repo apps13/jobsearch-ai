@@ -106,7 +106,14 @@ def generate_why_this_company(
         model=model or settings.openai_model,
         max_tokens=300,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert career coach. Write concise, specific, genuine responses "
+                    "tailored to the candidate and role. Return plain text only — no JSON, "
+                    "no markdown, no headings, no extra formatting."
+                ),
+            },
             {"role": "user", "content": prompt},
         ],
     )
