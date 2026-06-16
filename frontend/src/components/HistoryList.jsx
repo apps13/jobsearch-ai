@@ -8,7 +8,7 @@ function HistoryItem({ entry, onDeleted }) {
   const [error, setError] = useState(null)
 
   const handleDelete = async () => {
-    if (!confirm('Delete this cover letter from your history?')) return
+    if (!confirm('Delete this entry from your history?')) return
     setDeleting(true)
     setError(null)
     try {
@@ -20,18 +20,30 @@ function HistoryItem({ entry, onDeleted }) {
     }
   }
 
+  const matchScore = entry.fit_analysis?.match_score
+  const hasCoverLetter = Boolean(entry.cover_letter)
+  const hasWtc = Boolean(entry.why_this_company)
+
   return (
     <li className="history-item">
       <button type="button" className="history-summary" onClick={() => setExpanded((v) => !v)}>
         <span>Role #{entry.role_id}</span>
-        <span className="match-score">Match score: {entry.fit_analysis.match_score}%</span>
+        {matchScore != null && (
+          <span className="match-score">Match score: {matchScore}%</span>
+        )}
         <span className="muted">{new Date(entry.created_at).toLocaleString()}</span>
         <span>{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
         <div className="history-detail">
-          <CoverLetterText coverLetter={entry.cover_letter} />
-          <FitAnalysis fitAnalysis={entry.fit_analysis} />
+          {hasCoverLetter && <CoverLetterText coverLetter={entry.cover_letter} />}
+          {hasWtc && (
+            <div className="why-this-company">
+              <h4>Why This Company</h4>
+              <p>{entry.why_this_company}</p>
+            </div>
+          )}
+          {entry.fit_analysis && <FitAnalysis fitAnalysis={entry.fit_analysis} />}
           {error && <p className="error">{error}</p>}
           <div className="history-delete">
             <button type="button" className="btn-delete" onClick={handleDelete} disabled={deleting}>

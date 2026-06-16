@@ -5,7 +5,7 @@ export default function LoadingBar({ complete }) {
         <div className={`loading-bar-fill${complete ? ' complete' : ''}`} />
       </div>
       <p className="loading-bar-label">
-        {complete ? 'Done!' : 'Generating your cover letter...'}
+        {complete ? 'Done!' : 'Generating...'}
       </p>
     </div>
   )
