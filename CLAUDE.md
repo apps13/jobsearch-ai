@@ -4,22 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-JobSearch AI is a tool that generates tailored cover letters, fit analyses, and "Why This Company" answers from a resume and a job description, using OpenAI's API.
+JobSearch AI generates tailored cover letters, fit analyses, and "Why This Company" answers from a resume and job description. See [README.md](README.md) for user-facing documentation and local dev setup.
 
-Current feature set (as implemented):
+## API surface (quick reference)
 
-- **Save and reuse resumes** — `POST /api/resumes` (JSON `{label, content}`) and `GET /api/resumes` / `GET /api/resumes/{id}` ([backend/app/api/routes/resume.py](backend/app/api/routes/resume.py)). Both `POST /api/resumes` and `POST /api/resumes/upload` reject a `label` that already exists (case-insensitive) with a 400 `"A resume already exists with this name."` ([backend/app/repositories/resume_repo.py](backend/app/repositories/resume_repo.py) `get_by_label`).
-- **Upload a resume as a PDF** — `POST /api/resumes/upload` (`multipart/form-data` with `label` and `file`). Extracts text via `PyPDF2` ([backend/app/services/resume_parser.py](backend/app/services/resume_parser.py)) and stores it the same as `POST /api/resumes`. Rejects non-PDF files and PDFs with no extractable text (e.g. scanned images) with a 400. This is the endpoint the frontend uses.
-- **Delete a saved resume** — `DELETE /api/resumes/{id}` returns 204, or 404 if not found. If the resume is referenced by an existing cover letter (FK on `cover_letters.resume_id`), returns 400 `"This resume is used by saved cover letters and can't be deleted."` instead of deleting. API-only — not exposed in the UI (deleting history entries is the supported way to free up a resume for deletion).
-- **Generate outputs** — `POST /api/cover-letter` accepts either a saved `resume_id` or pasted `resume_text`, plus `role_title`, `job_description`, and boolean flags `generate_cover_letter` (default `true`) and `generate_why_this_company` (default `false`). Calls OpenAI and persists the result; `cover_letter`/`fit_analysis` are nullable since either output can be skipped ([backend/app/api/routes/cover_letter.py](backend/app/api/routes/cover_letter.py), [backend/app/services/generator.py](backend/app/services/generator.py))
-- **Generation history** — `GET /api/cover-letter` returns past generations
-- **Delete a history entry** — `DELETE /api/cover-letter/{id}` returns 204, or 404 if not found. Deletes the `CoverLetter` row and its associated `Role` row (each generation creates its own `Role`, so it's safe to remove alongside the cover letter — [backend/app/services/generator.py](backend/app/services/generator.py) `CoverLetterService.delete_history_entry`). Exposed in the UI as a "Delete" button on each History entry.
-- **Health check** — `GET /health`, used for deploy/monitoring checks ([backend/app/api/routes/health.py](backend/app/api/routes/health.py))
-- **OAuth login (Google/Microsoft)** — `GET /api/auth/{provider}/login` redirects to the provider; `GET /api/auth/{provider}/callback` completes the flow, upserts a `User` row, and sets an httpOnly JWT cookie (`access_token`). `GET /api/auth/me` returns the current user (401 if not logged in) plus `is_admin`. `POST /api/auth/logout` clears the cookie. See [backend/app/api/routes/auth.py](backend/app/api/routes/auth.py).
-- **Admin approval workflow** — new accounts start as `pending`. `GET /api/resumes/*` and `/api/cover-letter/*` require `status=approved` (403 otherwise). Admins (emails in `settings.admin_emails`) use `GET /api/admin/users?status=`, `POST /api/admin/users/{id}/approve`, `POST /api/admin/users/{id}/reject` ([backend/app/api/routes/admin.py](backend/app/api/routes/admin.py)) — exposed in the UI as an "Admin" tab.
-- **Per-user data isolation** — `Resume`, `Role`, and `CoverLetter` rows each carry a `user_id` FK to `users.id`. All repository reads/writes (`ResumeRepository`, `RoleRepository`, `CoverLetterRepository`) are scoped to the current user's `id`, so users can only see/manage their own saved resumes and generation history — even other approved users' data is invisible. `CoverLetterService` methods (`generate`, `history`, `delete_history_entry`) take `user_id` explicitly.
+| Method | Path | Auth required |
+|---|---|---|
+| `GET` | `/api/auth/{provider}/login` | — |
+| `GET` | `/api/auth/{provider}/callback` | — |
+| `GET` | `/api/auth/me` | cookie |
+| `POST` | `/api/auth/logout` | cookie |
+| `GET/POST` | `/api/resumes`, `/api/resumes/upload` | approved |
+| `GET/DELETE` | `/api/resumes/{id}` | approved |
+| `POST/GET` | `/api/cover-letter` | approved |
+| `DELETE` | `/api/cover-letter/{id}` | approved |
+| `GET` | `/api/admin/users` | admin |
+| `POST` | `/api/admin/users/{id}/approve` | admin |
+| `POST` | `/api/admin/users/{id}/reject` | admin |
+| `GET` | `/health` | — |
 
-The frontend ([frontend/](frontend/)) is a minimal React UI for the flows above — sign in via OAuth, upload/select a resume, paste a job description, choose which outputs to generate (cover letter and/or Why This Company), browse past generations, delete history entries, and (for admins) approve/reject pending users. The UI uses the "Espresso Paper" dark theme (deep brown background, cream text, terracotta/olive/mustard accents — see [frontend/src/index.css](frontend/src/index.css) and [frontend/src/App.css](frontend/src/App.css)) and shows an animated progress bar ([frontend/src/components/LoadingBar.jsx](frontend/src/components/LoadingBar.jsx)) while generating. See [frontend/README.md](frontend/README.md) for stack and security notes.
+`POST /api/cover-letter` flags: `generate_cover_letter` (default `true`), `generate_why_this_company` (default `false`). `cover_letter`, `fit_analysis`, and `why_this_company` on `CoverLetterRead` are all nullable — any output can be skipped.
 
 ## Tech stack
 
@@ -123,29 +127,6 @@ Defined in [backend/app/core/config.py](backend/app/core/config.py) (`Settings`)
 [backend/.env.example](backend/.env.example) provides sensible non-secret defaults for `OPENAI_MODEL`, `DATABASE_URL`, `ENVIRONMENT`, `FRONTEND_URL`, `JWT_ALGORITHM`, `JWT_EXPIRE_MINUTES`, `MICROSOFT_TENANT`, and `ADMIN_EMAILS`. `OPENAI_API_KEY`, `JWT_SECRET`, `OAUTH_SESSION_SECRET`, and all OAuth client ids/secrets are left blank/placeholder — keep it this way; generate real values locally with `openssl rand -hex 32` and never commit them.
 
 CORS origins (`Settings.cors_origins`) are currently hardcoded in `config.py` rather than environment-driven (`http://localhost:5173` for Vite dev, plus the production Netlify URL — see Deployment below).
-
-## Local development
-
-A [docker-compose.yml](docker-compose.yml) at the repo root runs a local Postgres (`postgres:16-alpine`, db `jobsearch`, user/pass `postgres`/`postgres`, port 5432) matching the default `DATABASE_URL`. To run the backend locally:
-
-```
-docker compose up -d
-cd backend
-.\venv\Scripts\activate
-alembic upgrade head
-uvicorn app.main:app --reload
-```
-
-### Frontend (`frontend/`)
-
-```
-cd frontend
-cp .env.example .env.local
-npm install
-npm run dev
-```
-
-Runs at `http://localhost:5173` (already allowed by `Settings.cors_origins`). Requires the backend running per above. See [frontend/README.md](frontend/README.md) for the stack summary and security notes.
 
 ## Deployment
 
