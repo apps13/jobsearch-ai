@@ -18,6 +18,8 @@ export default function GenerateForm({ resumes, resumesError, onGenerated, onRes
   const [savedResumeId, setSavedResumeId] = useState('')
   const [roleTitle, setRoleTitle] = useState('')
   const [jobDescription, setJobDescription] = useState('')
+  const [genCoverLetter, setGenCoverLetter] = useState(true)
+  const [genWtc, setGenWtc] = useState(false)
   const [loading, setLoading] = useState(false)
   const [justFinished, setJustFinished] = useState(false)
   const [error, setError] = useState(null)
@@ -37,7 +39,7 @@ export default function GenerateForm({ resumes, resumesError, onGenerated, onRes
       ? resumeLabel.trim() && resumeFile && isPdf(resumeFile)
       : Boolean(savedResumeId)
 
-  const detailsReady = Boolean(roleTitle.trim() && jobDescription.trim())
+  const detailsReady = Boolean(roleTitle.trim() && jobDescription.trim() && (genCoverLetter || genWtc))
 
   const handleGenerate = async (e) => {
     e.preventDefault()
@@ -57,6 +59,8 @@ export default function GenerateForm({ resumes, resumesError, onGenerated, onRes
         resume_id: resumeId,
         role_title: roleTitle.trim(),
         job_description: jobDescription.trim(),
+        generate_cover_letter: genCoverLetter,
+        generate_why_this_company: genWtc,
       })
       setJustFinished(true)
       await new Promise((r) => setTimeout(r, 450))
@@ -188,6 +192,32 @@ export default function GenerateForm({ resumes, resumesError, onGenerated, onRes
               placeholder="Paste the job description here..."
             />
           </label>
+
+          <div className="output-options">
+            <span className="output-options-label">Generate:</span>
+            <label className="output-option">
+              <input
+                type="checkbox"
+                checked={genCoverLetter}
+                onChange={(e) => setGenCoverLetter(e.target.checked)}
+                disabled={loading}
+              />
+              Cover Letter
+            </label>
+            <label className="output-option">
+              <input
+                type="checkbox"
+                checked={genWtc}
+                onChange={(e) => setGenWtc(e.target.checked)}
+                disabled={loading}
+              />
+              Why This Company
+            </label>
+          </div>
+
+          {!genCoverLetter && !genWtc && (
+            <p className="error">Select at least one output to generate.</p>
+          )}
 
           {error && <p className="error">{error}</p>}
 

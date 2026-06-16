@@ -74,13 +74,43 @@ def generate_cover_letter(
     response = client.chat.completions.create(
         model=model or settings.openai_model,
         max_tokens=1500,
-        response_format={"type": "json_object"},  # JSON mode — guarantees valid JSON
+        response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": build_user_prompt(resume_text, job_description)},
         ],
     )
     return json.loads(response.choices[0].message.content)
+
+
+def generate_why_this_company(
+    resume_text: str,
+    job_description: str,
+    model: str | None = None,
+) -> str:
+    """Call OpenAI and return a short 'Why this company?' paragraph."""
+    client = OpenAI(api_key=settings.openai_api_key)
+
+    prompt = (
+        "Given the following resume and job description, write a 2–4 sentence first-person "
+        "answer to the interview/application question 'Why do you want to work here?' or "
+        "'Why this company?'. Be specific to the company and role — reference concrete details "
+        "from the job description such as their mission, product, team focus, or values. "
+        "Connect those details to relevant experience, skills, or goals from the resume. "
+        "Avoid generic filler. Write in a natural, confident tone. "
+        "Return only the paragraph — no heading, no extra text.\n\n"
+        f"RESUME:\n{resume_text}\n\nJOB DESCRIPTION:\n{job_description}"
+    )
+
+    response = client.chat.completions.create(
+        model=model or settings.openai_model,
+        max_tokens=300,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    return response.choices[0].message.content.strip()
 
 
 class CoverLetterService:
@@ -96,13 +126,25 @@ class CoverLetterService:
         role = self.roles.create(
             title=req.role_title, job_description=req.job_description, user_id=user_id
         )
-        result = generate_cover_letter(resume_text, req.job_description)
+
+        cover_letter_data = None
+        fit_analysis_data = None
+        if req.generate_cover_letter:
+            result = generate_cover_letter(resume_text, req.job_description)
+            cover_letter_data = result["cover_letter"]
+            fit_analysis_data = result["fit_analysis"]
+
+        wtc = None
+        if req.generate_why_this_company:
+            wtc = generate_why_this_company(resume_text, req.job_description)
+
         return self.cover_letters.create(
             role_id=role.id,
-            resume_id=req.resume_id,
             user_id=user_id,
-            cover_letter=result["cover_letter"],
-            fit_analysis=result["fit_analysis"],
+            cover_letter=cover_letter_data,
+            fit_analysis=fit_analysis_data,
+            why_this_company=wtc,
+            resume_id=req.resume_id,
         )
 
     def history(self, user_id: int):

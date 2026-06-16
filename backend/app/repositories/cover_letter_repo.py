@@ -12,9 +12,10 @@ class CoverLetterRepository:
     def create(
         self,
         role_id: int,
-        cover_letter: dict,
-        fit_analysis: dict,
         user_id: int,
+        cover_letter: dict | None = None,
+        fit_analysis: dict | None = None,
+        why_this_company: str | None = None,
         resume_id: int | None = None,
     ) -> CoverLetter:
         record = CoverLetter(
@@ -23,6 +24,7 @@ class CoverLetterRepository:
             user_id=user_id,
             cover_letter=cover_letter,
             fit_analysis=fit_analysis,
+            why_this_company=why_this_company,
         )
         self.db.add(record)
         self.db.commit()

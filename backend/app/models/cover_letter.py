@@ -21,8 +21,9 @@ class CoverLetter(Base):
     # Nullable: a generation may use pasted resume text rather than a saved resume.
     resume_id: Mapped[int | None] = mapped_column(ForeignKey("resumes.id"), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"))
-    cover_letter: Mapped[dict] = mapped_column(JSON)
-    fit_analysis: Mapped[dict] = mapped_column(JSON)
+    cover_letter: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    fit_analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    why_this_company: Mapped[str | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

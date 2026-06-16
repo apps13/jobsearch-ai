@@ -33,6 +33,8 @@ class GenerateCoverLetterRequest(BaseModel):
     resume_text: str | None = None
     role_title: str
     job_description: str
+    generate_cover_letter: bool = True
+    generate_why_this_company: bool = False
 
 
 class CoverLetterRead(BaseModel):
@@ -41,6 +43,7 @@ class CoverLetterRead(BaseModel):
     id: int
     resume_id: int | None
     role_id: int
-    cover_letter: CoverLetterBody
-    fit_analysis: FitAnalysis
+    cover_letter: CoverLetterBody | None = None
+    fit_analysis: FitAnalysis | None = None
+    why_this_company: str | None = None
     created_at: datetime
