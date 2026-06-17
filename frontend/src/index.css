@@ -26,8 +26,15 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+}
+
 html {
   scrollbar-gutter: stable;
+  overflow-x: hidden;
 }
 
 a {

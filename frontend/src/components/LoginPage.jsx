@@ -8,8 +8,9 @@ const PROVIDERS = [
 export default function LoginPage() {
   return (
     <div className="panel login-panel">
-      <h2>Sign in</h2>
-      <p className="muted">Sign in to generate tailored cover letters.</p>
+      <h2>JobSearch AI</h2>
+      <p className="tagline">From resume to applications, tailored for you.</p>
+      <p className="muted" style={{ marginTop: '0.75rem' }}>Sign in to get started.</p>
       <div className="login-buttons">
         {PROVIDERS.map((p) => (
           <a key={p.id} className="login-button" href={`${API_URL}/api/auth/${p.id}/login`}>

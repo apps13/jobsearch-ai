@@ -53,71 +53,74 @@ function App() {
     setUser(null)
   }
 
+  const { startTour } = useTour(user?.is_admin)
+  const tabs = user?.is_admin ? [...TABS, ADMIN_TAB] : TABS
+
   if (user === undefined) {
     return null
   }
 
-  const tabs = user?.is_admin ? [...TABS, ADMIN_TAB] : TABS
-  const { startTour } = useTour(user?.is_admin)
-
   return (
-    <div className="app">
+    <div className="app-wrapper">
       <header className="app-header">
         <div className="app-header-row">
-          <div>
-            <h1>JobSearch AI</h1>
-            <p className="tagline">Tailored cover letters, fast.</p>
-          </div>
-          {user && (user.status === 'approved' || user.is_admin) && (
+          <span className="app-brand">JobSearch AI</span>
+          {user && (
             <div className="header-actions">
-              <button type="button" className="btn-help" onClick={startTour} title="Take a tour">
-                ?
-              </button>
-              <button type="button" className="btn-delete" onClick={handleLogout}>
+              {user.email && (
+                <span className="header-user">{user.email}</span>
+              )}
+              {(user.status === 'approved' || user.is_admin) && (
+                <button type="button" className="btn-help" onClick={startTour} title="Take a tour">
+                  ?
+                </button>
+              )}
+              <button type="button" className="btn-logout" onClick={handleLogout}>
                 Log out
               </button>
             </div>
           )}
-          {user && user.status !== 'approved' && !user.is_admin && (
-            <button type="button" className="btn-delete" onClick={handleLogout}>
-              Log out
-            </button>
-          )}
         </div>
       </header>
 
-      {!user && <LoginPage />}
+      <main className="app">
+        {!user && <LoginPage />}
 
-      {user && user.status !== 'approved' && !user.is_admin && <PendingApproval status={user.status} />}
+        {user && user.status !== 'approved' && !user.is_admin && <PendingApproval status={user.status} />}
 
-      {user && (user.status === 'approved' || user.is_admin) && (
-        <>
-          <nav className="tabs">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                className={tab === t.id ? 'active' : ''}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
+        {user && (user.status === 'approved' || user.is_admin) && (
+          <>
+            <nav className="tabs">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  className={tab === t.id ? 'active' : ''}
+                  onClick={() => setTab(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
 
-          {tab === 'generate' && (
-            <GenerateForm
-              resumes={resumes}
-              resumesError={resumesError}
-              onGenerated={() => setHistoryRefreshKey((k) => k + 1)}
-              onResumeUploaded={loadResumes}
-            />
-          )}
+            {tab === 'generate' && (
+              <GenerateForm
+                resumes={resumes}
+                resumesError={resumesError}
+                onGenerated={() => setHistoryRefreshKey((k) => k + 1)}
+                onResumeUploaded={loadResumes}
+              />
+            )}
 
-          {tab === 'history' && <HistoryList refreshKey={historyRefreshKey} />}
+            {tab === 'history' && <HistoryList refreshKey={historyRefreshKey} />}
 
-          {tab === 'admin' && user.is_admin && <AdminPanel />}
-        </>
-      )}
+            {tab === 'admin' && user.is_admin && <AdminPanel />}
+          </>
+        )}
+      </main>
+
+      <footer className="app-footer">
+        <p>© 2026 JobSearch AI. All rights reserved.</p>
+      </footer>
     </div>
   )
 }

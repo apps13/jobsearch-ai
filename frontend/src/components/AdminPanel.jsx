@@ -88,7 +88,7 @@ export default function AdminPanel() {
                 </span>
                 <span className="muted">{u.provider}</span>
                 <span className={`status-badge status-${u.status}`}>{u.status}</span>
-                <span className="muted">{new Date(u.created_at).toLocaleString()}</span>
+                <span className="muted admin-timestamp">{new Date(u.created_at).toLocaleString()}</span>
               </div>
               {u.status !== 'approved' && (
                 <div className="history-detail admin-actions">
