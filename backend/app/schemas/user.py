@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.user import UserStatus
 
@@ -16,8 +16,14 @@ class UserRead(BaseModel):
     picture: str | None
     provider: str
     status: UserStatus
+    generations_used: int
+    generation_limit: int
     created_at: datetime
 
 
 class CurrentUserRead(UserRead):
     is_admin: bool
+
+
+class UpdateGenerationLimitRequest(BaseModel):
+    generation_limit: int = Field(ge=0)

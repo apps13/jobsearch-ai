@@ -37,6 +37,15 @@ class UserRepository:
         self.db.refresh(user)
         return user
 
+    def set_generation_limit(self, user_id: int, limit: int) -> User | None:
+        user = self.db.get(User, user_id)
+        if user is None:
+            return None
+        user.generation_limit = limit
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
     def upsert_from_oauth(
         self,
         email: str,

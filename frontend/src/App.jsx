@@ -45,7 +45,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (user?.status === 'approved') loadResumes()
+    if (user && user.status !== 'rejected') loadResumes()
   }, [user])
 
   const handleLogout = async () => {
@@ -70,7 +70,7 @@ function App() {
               {user.email && (
                 <span className="header-user">{user.email}</span>
               )}
-              {(user.status === 'approved' || user.is_admin) && (
+              {(user.status !== 'rejected' || user.is_admin) && (
                 <button type="button" className="btn-help" onClick={startTour} title="Take a tour">
                   ?
                 </button>
@@ -86,9 +86,9 @@ function App() {
       <main className="app">
         {!user && <LoginPage />}
 
-        {user && user.status !== 'approved' && !user.is_admin && <PendingApproval status={user.status} />}
+        {user && user.status === 'rejected' && !user.is_admin && <PendingApproval />}
 
-        {user && (user.status === 'approved' || user.is_admin) && (
+        {user && (user.status !== 'rejected' || user.is_admin) && (
           <>
             <nav className="tabs">
               {tabs.map((t) => (
@@ -106,8 +106,12 @@ function App() {
               <GenerateForm
                 resumes={resumes}
                 resumesError={resumesError}
-                onGenerated={() => setHistoryRefreshKey((k) => k + 1)}
+                onGenerated={() => {
+                  setHistoryRefreshKey((k) => k + 1)
+                  loadUser()
+                }}
                 onResumeUploaded={loadResumes}
+                user={user}
               />
             )}
 

@@ -85,6 +85,8 @@ def me(user: User = Depends(get_current_user)):
         picture=user.picture,
         provider=user.provider,
         status=user.status,
+        generations_used=user.generations_used,
+        generation_limit=user.generation_limit,
         created_at=user.created_at,
         is_admin=is_admin,
     )

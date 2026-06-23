@@ -14,16 +14,17 @@ JobSearch AI generates tailored cover letters, fit analyses, and "Why This Compa
 | `GET` | `/api/auth/{provider}/callback` | — |
 | `GET` | `/api/auth/me` | cookie |
 | `POST` | `/api/auth/logout` | cookie |
-| `GET/POST` | `/api/resumes`, `/api/resumes/upload` | approved |
-| `GET/DELETE` | `/api/resumes/{id}` | approved |
-| `POST/GET` | `/api/cover-letter` | approved |
-| `DELETE` | `/api/cover-letter/{id}` | approved |
+| `GET/POST` | `/api/resumes`, `/api/resumes/upload` | active |
+| `GET/DELETE` | `/api/resumes/{id}` | active |
+| `POST/GET` | `/api/cover-letter` | active (+ generation cap on `POST`) |
+| `DELETE` | `/api/cover-letter/{id}` | active |
 | `GET` | `/api/admin/users` | admin |
 | `POST` | `/api/admin/users/{id}/approve` | admin |
 | `POST` | `/api/admin/users/{id}/reject` | admin |
+| `PATCH` | `/api/admin/users/{id}/limit` | admin |
 | `GET` | `/health` | — |
 
-`POST /api/cover-letter` flags: `generate_cover_letter` (default `true`), `generate_why_this_company` (default `false`). `cover_letter`, `fit_analysis`, and `why_this_company` on `CoverLetterRead` are all nullable — any output can be skipped.
+`POST /api/cover-letter` flags: `generate_cover_letter` (default `true`), `generate_why_this_company` (default `false`). `cover_letter`, `fit_analysis`, and `why_this_company` on `CoverLetterRead` are all nullable — any output can be skipped. Each successful `POST` counts as exactly one generation against the calling user's `generation_limit` (default 5, unlimited for admins), regardless of how many outputs it produces.
 
 ## Tech stack
 
@@ -58,10 +59,10 @@ Database: PostgreSQL (`postgresql+psycopg2://...`). Default in [backend/app/core
 Backend layers, each with a single responsibility:
 
 - **`app/api/routes/`** — FastAPI routers (HTTP layer only). Parses/validates requests via schemas, calls services or repositories, and maps results/exceptions to HTTP responses. No business logic or direct DB queries. Includes `auth.py` (OAuth login/callback/me/logout) and `admin.py` (user approval).
-- **`app/api/deps.py`** — auth dependencies: `get_current_user` (reads the `access_token` cookie, decodes the JWT, loads the `User`), `require_approved_user` (403 unless `status == approved`), `require_admin` (403 unless email is in `settings.admin_emails`).
+- **`app/api/deps.py`** — auth dependencies: `get_current_user` (reads the `access_token` cookie, decodes the JWT, loads the `User`), `require_active_user` (403 if `status == rejected`, i.e. blocked), `require_admin` (403 unless email is in `settings.admin_emails`), `enforce_generation_cap` (built on `require_active_user`; 403 if `generations_used >= generation_limit`, admins exempt).
 - **`app/services/`** — business logic. `CoverLetterService` orchestrates resume resolution, role creation, the OpenAI call, and persistence; `resume_parser.py` extracts text from uploaded resume PDFs (`extract_resume_text`); `oauth_profile.py` normalizes Google/Microsoft profile responses into a common `ProviderProfile`. Knows nothing about HTTP or FastAPI.
 - **`app/repositories/`** — data access layer. One repository per model (`ResumeRepository`, `RoleRepository`, `CoverLetterRepository`, `UserRepository`); each is the *only* code that runs SQLAlchemy queries against its model.
-- **`app/models/`** — SQLAlchemy ORM models (`Resume`, `Role`, `CoverLetter`, `User`), all inheriting from `Base` in `app/db/base.py`. Imported in `backend/alembic/env.py` (`import app.models`) so they register with `Base.metadata` for autogenerate. `User.status` is a `UserStatus` enum (`pending`/`approved`/`rejected`, default `pending`). `Resume`, `Role`, and `CoverLetter` each have a `user_id` FK to `users.id` for per-user data isolation.
+- **`app/models/`** — SQLAlchemy ORM models (`Resume`, `Role`, `CoverLetter`, `User`), all inheriting from `Base` in `app/db/base.py`. Imported in `backend/alembic/env.py` (`import app.models`) so they register with `Base.metadata` for autogenerate. `User.status` is a `UserStatus` enum (`pending`/`approved`/`rejected`); new users default to `approved` (auto-approved on signup) — `rejected` denotes a blocked account, and `pending` is a legacy value only old, pre-migration rows can have. `User` also has `generation_limit` (default 5) and `generations_used` (default 0), incremented atomically alongside the `CoverLetter` insert in `CoverLetterRepository.create()` — any change to how generations are persisted must keep that increment in the same transaction. `Resume`, `Role`, and `CoverLetter` each have a `user_id` FK to `users.id` for per-user data isolation.
 - **`app/schemas/`** — Pydantic models defining API request/response contracts (`ResumeCreate`/`ResumeRead`, `GenerateCoverLetterRequest`/`CoverLetterRead`, `CoverLetterBody`, `FitAnalysis`, `UserRead`/`CurrentUserRead`). `CoverLetterRead` has nullable `cover_letter`, `fit_analysis`, and `why_this_company` fields since any output can be skipped.
 - **`app/db/`** — `base.py` (declarative `Base`), `session.py` (engine, `SessionLocal`, `get_db` FastAPI dependency).
 - **`app/core/config.py`** — the single `Settings` object (pydantic-settings), loaded from `backend/.env`. This is the **only** place environment variables are read.
@@ -70,9 +71,9 @@ Backend layers, each with a single responsibility:
 
 ### Frontend (`frontend/`)
 
-- **`src/api/`** — `client.js` (shared `fetch` wrapper with `credentials: 'include'`: JSON, `FormData`, and `DELETE` requests via `get`/`post`/`postForm`/`del`, error handling; exports `API_URL`), `resumes.js` (`getResumes`, `uploadResume`), `coverLetters.js` (`generateCoverLetter`, `getCoverLetterHistory`, `deleteCoverLetter`), `auth.js` (`getCurrentUser`, `logout`), `admin.js` (`listUsers`, `approveUser`, `rejectUser`).
-- **`src/components/`** — `GenerateForm.jsx` (3-step wizard: resume → job details + output checkboxes → result; shows `LoadingBar` while generating), `ResultView.jsx` (fit analysis always visible; tabs between Cover Letter / Why This Company when both generated; copy button on each output), `HistoryList.jsx` (past generations, expandable, each with a delete button; handles nullable cover letter/fit analysis/why this company), `LoadingBar.jsx` (animated progress bar shown during generation), `LoginPage.jsx` (OAuth provider buttons, plain links to `{API_URL}/api/auth/{provider}/login`), `PendingApproval.jsx` (shown while `status` is `pending`/`rejected`), `AdminPanel.jsx` (user list with status filter + approve/reject).
-- **`src/App.jsx`** — on mount calls `getCurrentUser()`; renders `LoginPage` (logged out), `PendingApproval` (`pending`/`rejected`), or the tab navigation (`generate` / `history`, plus `admin` if `is_admin`) for `approved` users. Holds shared state (saved resumes list, history refresh trigger, current user).
+- **`src/api/`** — `client.js` (shared `fetch` wrapper with `credentials: 'include'`: JSON, `FormData`, `PATCH`, and `DELETE` requests via `get`/`post`/`postForm`/`patch`/`del`, error handling; exports `API_URL`), `resumes.js` (`getResumes`, `uploadResume`), `coverLetters.js` (`generateCoverLetter`, `getCoverLetterHistory`, `deleteCoverLetter`), `auth.js` (`getCurrentUser`, `logout`), `admin.js` (`listUsers`, `blockUser`, `unblockUser`, `updateGenerationLimit`).
+- **`src/components/`** — `GenerateForm.jsx` (3-step wizard: resume → job details + output checkboxes → result; shows `LoadingBar` while generating; disables Generate and shows a message once the signed-in user's `generations_used` reaches their `generation_limit`, unless `is_admin`), `ResultView.jsx` (fit analysis always visible; tabs between Cover Letter / Why This Company when both generated; copy button on each output), `HistoryList.jsx` (past generations, expandable, each with a delete button; handles nullable cover letter/fit analysis/why this company), `LoadingBar.jsx` (animated progress bar shown during generation), `LoginPage.jsx` (OAuth provider buttons, plain links to `{API_URL}/api/auth/{provider}/login`), `PendingApproval.jsx` (shown only when `status === 'rejected'`, i.e. blocked), `AdminPanel.jsx` (user list showing per-user usage as `generations_used`/`generation_limit`, an inline editor to raise a user's limit, and a Block/Unblock action).
+- **`src/App.jsx`** — on mount calls `getCurrentUser()`; renders `LoginPage` (logged out), `PendingApproval` (blocked, i.e. `status === 'rejected'` and not admin), or the tab navigation (`generate` / `history`, plus `admin` if `is_admin`) otherwise. Holds shared state (saved resumes list, history refresh trigger, current user); re-fetches the current user after each generation so the displayed usage count stays live.
 - **`.env.example`** — `VITE_API_URL`, copied to `.env.local` (gitignored) for local dev.
 
 ## Architecture decisions
@@ -143,4 +144,5 @@ CORS origins (`Settings.cors_origins`) are currently hardcoded in `config.py` ra
 - Do not import or call `os.environ`/`os.getenv` directly — use `settings` from `app/core/config.py`.
 - Do not expose internal error details (stack traces, raw exception strings) in API responses.
 - Do not commit `.env`, `venv/`, `__pycache__/`, `node_modules/`, or `dist/` (already covered by [.gitignore](.gitignore)).
-- Do not bypass `require_approved_user` or `require_admin` on resume/cover-letter/admin routes, and do not add new endpoints that read user identity from anything other than `app/api/deps.py` (e.g. a header or query param) — the cookie-based JWT is the single source of truth for the current user.
+- Do not bypass `require_active_user`, `enforce_generation_cap`, or `require_admin` on resume/cover-letter/admin routes, and do not add new endpoints that read user identity from anything other than `app/api/deps.py` (e.g. a header or query param) — the cookie-based JWT is the single source of truth for the current user.
+- Do not increment `User.generations_used` anywhere except inside `CoverLetterRepository.create()` — it must stay in the same transaction as the `CoverLetter` insert it's counting.

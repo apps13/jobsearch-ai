@@ -7,7 +7,7 @@ const STEPS = [
     text: `<strong>Welcome to JobSearch AI!</strong><br><br>
       This quick tour will walk you through the app.
       You can exit at any time by pressing <strong>Esc</strong> or clicking outside.`,
-    attachTo: { element: 'h1', on: 'bottom' },
+    attachTo: { element: '.app-brand', on: 'bottom' },
   },
   {
     id: 'tabs',

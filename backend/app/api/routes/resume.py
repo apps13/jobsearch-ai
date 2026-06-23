@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_approved_user
+from app.api.deps import require_active_user
 from app.db.session import get_db
 from app.models.user import User
 from app.repositories.resume_repo import ResumeRepository
@@ -12,13 +12,13 @@ from app.schemas.resume import ResumeCreate, ResumeRead
 from app.services.resume_parser import extract_resume_text
 
 router = APIRouter(
-    prefix="/api/resumes", tags=["resumes"], dependencies=[Depends(require_approved_user)]
+    prefix="/api/resumes", tags=["resumes"], dependencies=[Depends(require_active_user)]
 )
 
 
 @router.post("", response_model=ResumeRead, status_code=201)
 def create_resume(
-    data: ResumeCreate, db: Session = Depends(get_db), user: User = Depends(require_approved_user)
+    data: ResumeCreate, db: Session = Depends(get_db), user: User = Depends(require_active_user)
 ):
     repo = ResumeRepository(db)
     if repo.get_by_label(data.label, user.id) is not None:
@@ -31,7 +31,7 @@ def upload_resume(
     label: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    user: User = Depends(require_approved_user),
+    user: User = Depends(require_active_user),
 ):
     repo = ResumeRepository(db)
     if repo.get_by_label(label, user.id) is not None:
@@ -44,13 +44,13 @@ def upload_resume(
 
 
 @router.get("", response_model=list[ResumeRead])
-def list_resumes(db: Session = Depends(get_db), user: User = Depends(require_approved_user)):
+def list_resumes(db: Session = Depends(get_db), user: User = Depends(require_active_user)):
     return ResumeRepository(db).list(user.id)
 
 
 @router.get("/{resume_id}", response_model=ResumeRead)
 def get_resume(
-    resume_id: int, db: Session = Depends(get_db), user: User = Depends(require_approved_user)
+    resume_id: int, db: Session = Depends(get_db), user: User = Depends(require_active_user)
 ):
     resume = ResumeRepository(db).get(resume_id, user.id)
     if resume is None:
@@ -60,7 +60,7 @@ def get_resume(
 
 @router.delete("/{resume_id}", status_code=204)
 def delete_resume(
-    resume_id: int, db: Session = Depends(get_db), user: User = Depends(require_approved_user)
+    resume_id: int, db: Session = Depends(get_db), user: User = Depends(require_active_user)
 ):
     repo = ResumeRepository(db)
     try:

@@ -39,6 +39,14 @@ export function postForm(path, formData) {
   })
 }
 
+export function patch(path, body) {
+  return request(path, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
 export function del(path) {
   return request(path, { method: 'DELETE' })
 }

@@ -1,8 +1,10 @@
 """Data access for generated cover letters (the user's history)."""
 
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.models.cover_letter import CoverLetter
+from app.models.user import User
 
 
 class CoverLetterRepository:
@@ -27,6 +29,9 @@ class CoverLetterRepository:
             why_this_company=why_this_company,
         )
         self.db.add(record)
+        self.db.execute(
+            update(User).where(User.id == user_id).values(generations_used=User.generations_used + 1)
+        )
         self.db.commit()
         self.db.refresh(record)
         return record

@@ -10,7 +10,7 @@ const STEPS = [
   { id: 3, label: 'Result' },
 ]
 
-export default function GenerateForm({ resumes, resumesError, onGenerated, onResumeUploaded }) {
+export default function GenerateForm({ resumes, resumesError, onGenerated, onResumeUploaded, user }) {
   const [step, setStep] = useState(1)
   const [resumeMode, setResumeMode] = useState('upload')
   const [resumeLabel, setResumeLabel] = useState('')
@@ -40,6 +40,8 @@ export default function GenerateForm({ resumes, resumesError, onGenerated, onRes
       : Boolean(savedResumeId)
 
   const detailsReady = Boolean(roleTitle.trim() && jobDescription.trim() && (genCoverLetter || genWtc))
+
+  const atCap = !user?.is_admin && user?.generations_used >= user?.generation_limit
 
   const handleGenerate = async (e) => {
     e.preventDefault()
@@ -219,13 +221,20 @@ export default function GenerateForm({ resumes, resumesError, onGenerated, onRes
             <p className="error">Select at least one output to generate.</p>
           )}
 
+          {atCap && (
+            <p className="error">
+              You&apos;ve reached your generation limit ({user.generations_used}/{user.generation_limit}).
+              Contact an admin to request more.
+            </p>
+          )}
+
           {error && <p className="error">{error}</p>}
 
           <div className="wizard-actions wizard-actions-between">
             <button type="button" onClick={() => setStep(1)} disabled={loading}>
               Back
             </button>
-            <button type="submit" disabled={!detailsReady || loading}>
+            <button type="submit" disabled={!detailsReady || loading || atCap}>
               {loading ? 'Generating...' : 'Generate'}
             </button>
           </div>

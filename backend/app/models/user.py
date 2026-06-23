@@ -1,18 +1,18 @@
-"""User ORM model — an account created via OAuth login, pending admin approval."""
+"""User ORM model — an account created via OAuth login, auto-approved with a generation cap."""
 
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, String, func
+from sqlalchemy import DateTime, Enum, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
 
 class UserStatus(str, enum.Enum):
-    pending = "pending"
+    pending = "pending"  # legacy value; new users default to approved
     approved = "approved"
-    rejected = "rejected"
+    rejected = "rejected"  # blocked
 
 
 class User(Base):
@@ -25,8 +25,10 @@ class User(Base):
     provider: Mapped[str] = mapped_column(String(50))
     provider_user_id: Mapped[str] = mapped_column(String(255))
     status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus, name="user_status"), default=UserStatus.pending
+        Enum(UserStatus, name="user_status"), default=UserStatus.approved, server_default="approved"
     )
+    generation_limit: Mapped[int] = mapped_column(Integer, default=5, server_default="5", nullable=False)
+    generations_used: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
