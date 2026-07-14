@@ -94,6 +94,12 @@ Backend layers, each with a single responsibility:
 - **Use type hints on all function signatures** — existing code already does this consistently (e.g. `def get(self, resume_id: int) -> Resume | None`); keep it up for new code.
 - **Use async functions for all route handlers and service methods.** Note: the current route handlers and service methods (e.g. `create_resume`, `CoverLetterService.generate`) are defined as `def`, not `async def`. Treat `async def` as the standard for *new* code, and consider migrating existing handlers when they're touched (the OpenAI SDK and SQLAlchemy both support async clients/sessions if this conversion happens).
 - **Pydantic schemas handle all input validation.** Routes and services should only work with validated schema instances (`ResumeCreate`, `GenerateCoverLetterRequest`, etc.) — never read raw `Request` bodies or untyped dicts from client input.
+- **Comment style — consistent placement and purpose across every file:**
+  - **Module docstring** (`"""..."""` at the top of the file, before imports): describes what the file does, the strategy or pipeline it implements, and any non-obvious design decisions. Keep it short — 3–10 lines. Do not restate the filename or list every function.
+  - **Block comments** (`# ...` above a group of related lines): explain *why* a section exists or what goal it serves when that isn't obvious from the code itself. Place the block comment on the line immediately above the section it describes, with a blank line before it if it follows unrelated code.
+  - **Inline comments** (`# ...` on the same line): explain a single line whose purpose or value is not self-evident — a magic number, a non-obvious API behaviour, a subtle invariant. Never restate what the line does; explain why it does it that way.
+  - **Function/class docstrings** (`"""..."""` as the first statement inside the def/class): single-line for simple functions, multi-line with `Args:` / `Returns:` for anything with non-obvious parameters or return values.
+  - **What not to comment**: do not comment on what the code plainly says (`# increment counter`, `# return result`), do not document the current task or caller (`# used by generate()`), and do not write comment blocks that duplicate the docstring.
 
 ## Security rules (non-negotiable)
 
